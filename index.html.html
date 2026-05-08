@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>供销存管理系统 · 气运版2.0</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root { --primary:#3b82f6; --success:#10b981; --danger:#ef4444; --warning:#f59e0b; --bg:#f8fafc; --card-bg:#fff; --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0; --sidebar-bg:#1e293b; --radius:12px; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI','PingFang SC',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+    .login-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);display:flex;align-items:center;justify-content:center;z-index:1000}
+    .login-box{background:var(--card-bg);border-radius:24px;padding:48px 40px;width:380px;max-width:90%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);text-align:center}
+    .login-box .logo{font-size:48px;margin-bottom:16px}
+    .login-box h2{font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px}
+    .login-box input{width:100%;padding:14px 16px;margin-bottom:16px;border:1.5px solid var(--border);border-radius:12px;font-size:15px}
+    .login-btn{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer}
+    .app-container{display:flex;width:100%}
+    .sidebar{width:260px;background:var(--sidebar-bg);color:#e2e8f0;position:fixed;top:0;left:0;bottom:0;z-index:200;overflow-y:auto;transition:transform .3s}
+    .sidebar-logo{padding:24px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,0.08)}
+    .sidebar-nav{padding:12px 8px}
+    .nav-section{font-size:10px;text-transform:uppercase;color:#94a3b8;padding:16px 12px 4px;letter-spacing:1px;font-weight:600}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:14px;color:#cbd5e1;margin-bottom:2px;transition:.2s}
+    .nav-item:hover{background:rgba(255,255,255,0.05);color:#f1f5f9}
+    .nav-item.active{background:var(--primary);color:#fff;font-weight:600}
+    .main-content{margin-left:260px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+    .topbar{background:var(--card-bg);padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+    .content-area{padding:20px;flex:1;overflow-y:auto}
+    .card{background:var(--card-bg);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,0.04);padding:20px;margin-bottom:20px}
+    .card h3{font-size:16px;font-weight:600;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+    th{background:#f8fafc;padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border)}
+    td{padding:10px 12px;border-bottom:1px solid #f1f5f9}
+    tr:hover td{background:#f8fafc}
+    .btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:.2s}
+    .btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:#2563eb}
+    .btn-success{background:var(--success);color:#fff}.btn-success:hover{background:#059669}
+    .btn-danger{background:#fff;color:var(--danger);border:1px solid #fecaca}.btn-danger:hover{background:#fef2f2}
+    .btn-outline{background:#fff;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:#f8fafc}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .menu-btn{display:none;font-size:24px;cursor:pointer;margin-right:12px;background:none;border:none;color:var(--text)}
+    @media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main-content{margin-left:0!important}.menu-btn{display:block}}
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(2px)}
+    .modal{background:#fff;border-radius:16px;max-width:700px;width:90%;max-height:85vh;overflow-y:auto;padding:24px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .modal-close{font-size:24px;cursor:pointer;color:var(--text-muted)}
+    .toast-container{position:fixed;top:20px;right:20px;z-index:400}
+    .toast{padding:12px 20px;border-radius:10px;color:#fff;margin-bottom:8px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+    .toast-success{background:var(--success)}.toast-error{background:var(--danger)}.toast-info{background:var(--primary)}
+    .input-control{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:12px}
+    .input-control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+    .input-group{margin-bottom:12px}.input-group label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;color:var(--text-muted)}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+    .grid-cols{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px,1fr));gap:12px;margin-bottom:20px}
+    .stat-card{background:var(--card-bg);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+    .stat-card .icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
+    .stat-card .label{color:var(--text-muted);font-size:13px;font-weight:500}
+    .stat-card .value{font-size:24px;font-weight:700;color:var(--text)}
+    .editable{background:#fffbeb;cursor:pointer;min-width:60px;border-bottom:1px dashed var(--primary)}
+    .progress-bar{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+    .progress-fill{height:100%;background:var(--primary);border-radius:4px;transition:width 0.5s}
+    .badge{padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+    .badge-success{background:#ecfdf5;color:#059669}.badge-warning{background:#fffbeb;color:#d97706}.badge-danger{background:#fef2f2;color:#dc2626}
+    .empty-state{text-align:center;padding:40px;color:var(--text-muted)}
+  </style>
+</head>
+<body>
+<div id="loginOverlay" class="login-overlay">
+  <div class="login-box">
+    <div class="logo">📦</div>
+    <h2>供销存管理系统</h2>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:24px;">智能化进销存管理平台</div>
+    <input type="text" id="loginUsername" placeholder="用户名" value="气运">
+    <input type="password" id="loginPassword" placeholder="密码" value="888888">
+    <button class="login-btn" id="loginBtn">登 录</button>
+    <div style="color:var(--danger);font-size:13px;margin-top:8px;" id="loginError"></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:12px;">默认管理员：气运 / 888888</div>
+  </div>
+</div>
+
+<div id="appContainer" class="app-container" style="display:none;">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><span style="font-size:28px;">📦</span><div><strong>供销存管理</strong><br><small id="currentUserLabel"></small></div></div>
+    <nav class="sidebar-nav" id="sideNav"></nav>
+  </aside>
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" id="menuBtn">☰</button>
+        <h2 id="pageTitle" style="font-size:20px;font-weight:700;"></h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span id="timeDisplay" style="font-size:13px;color:var(--text-muted);"></span>
+        <button class="btn btn-outline" id="logoutBtn">退出</button>
+      </div>
+    </header>
+    <div class="content-area" id="contentArea"></div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<div id="modalRoot"></div>
+
+<script>
+(function() {
+  const AUTH_KEY = 'scm_auth_v2', COMPANY_KEY = 'scm_company';
+  const DEFAULT_USER='气运', DEFAULT_PASS='888888';
+  function getAuth(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY))||{users:[{username:DEFAULT_USER,password:DEFAULT_PASS,role:'admin'}],currentUser:null}; }catch(e){return{users:[{username:DEFAULT_USER,password:DEFAULT_PASS,role:'admin'}],currentUser:null};} }
+  function saveAuth(d){ localStorage.setItem(AUTH_KEY,JSON.stringify(d)); }
+  function getCompany(){ try{return JSON.parse(localStorage.getItem(COMPANY_KEY))||null;}catch(e){return null;} }
+  function saveCompany(c){ localStorage.setItem(COMPANY_KEY,JSON.stringify(c)); }
+  let auth=getAuth(), currentUser=auth.currentUser;
+
+  const DATA_KEY='scm_data_pro';
+  function defaultData(){
+    return {
+      sysParams: { qtyDec:2, priceDec:2, defaultTaxRate:13 },
+      warehouses: [{ id:'W01', name:'总仓库', address:'', manager:'', phone:'' }],
+      staffs: [
+        { id:'ST01', name:'张三', phone:'13800000001', role:'仓管' },
+        { id:'ST02', name:'李四', phone:'13800000002', role:'采购员' },
+        { id:'ST03', name:'王五', phone:'13800000003', role:'销售员' }
+      ],
+      accounts: [{ id:'A01', name:'现金', balance:100000 }, { id:'A02', name:'银行', balance:500000 }],
+      products: [
+        { id:'P001', name:'高端蓝牙耳机', category:'电子产品', costPrice:85, sellPrice:199, stock:120, minStock:20, unit:'个', productionDate:'', expiryDays:0 },
+        { id:'P002', name:'不锈钢保温杯', category:'日用百货', costPrice:28, sellPrice:69, stock:8, minStock:15, unit:'个', productionDate:'', expiryDays:0 }
+      ],
+      suppliers: [{ id:'S001', name:'深圳科技有限公司', contact:'张经理', phone:'13800001111', address:'深圳市南山区', taxId:'', bankAccount:'', remark:'' }],
+      customers: [{ id:'C001', name:'零售客户A', contact:'赵先生', phone:'15800001111', address:'北京市', taxId:'', bankAccount:'', remark:'' }],
+      purchaseOrders:[], salesOrders:[], purchaseReturns:[], salesReturns:[],
+      receipts:[], payments:[],
+      nextIds: { product:3, warehouse:2, account:3, supplier:2, customer:2, staff:4, po:1, so:1, pr:1, sr:1, receipt:1, payment:1 },
+      logs:[]
+    };
+  }
+  function loadData(){ try{ let d=JSON.parse(localStorage.getItem(DATA_KEY)); if(!d) return defaultData(); return Object.assign(defaultData(),d); }catch(e){return defaultData();} }
+  let app=loadData();
+  function persist(){ localStorage.setItem(DATA_KEY,JSON.stringify(app)); addLog('数据已保存'); }
+  function addLog(msg){ app.logs.push({time:new Date().toLocaleString(),user:currentUser?.username||'unknown',msg}); if(app.logs.length>200) app.logs.shift(); }
+
+  const genId=(pre,type)=>{ let n=app.nextIds[type]||1; app.nextIds[type]=n+1; return pre+n.toString().padStart(3,'0'); };
+  const fmtQty=v=>Number(v).toFixed(app.sysParams.qtyDec);
+  const fmtPrice=v=>Number(v).toFixed(app.sysParams.priceDec);
+  const fmtMoney=v=>'¥'+Number(v).toFixed(2);
+  const getById=(arr,id)=>arr.find(x=>x.id===id);
+  function toast(msg,type='info'){ const c=document.getElementById('toastContainer'); const t=document.createElement('div'); t.className='toast toast-'+type; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.remove(),2500); }
+  function hasXLSX(){ return typeof XLSX!=='undefined'; }
+
+  function openModal(title,body,footer,cb){
+    const root=document.getElementById('modalRoot'); const overlay=document.createElement('div'); overlay.className='modal-overlay';
+    overlay.innerHTML=`<div class="modal"><div class="modal-header"><h3>${title}</h3><span class="modal-close">&times;</span></div>${body}<div style="margin-top:20px;text-align:right;">${footer||''}</div></div>`;
+    overlay.querySelector('.modal-close').addEventListener('click',()=>overlay.remove());
+    overlay.addEventListener('click',(e)=>{if(e.target===overlay) overlay.remove();});
+    root.appendChild(overlay); if(cb) cb(overlay); return overlay;
+  }
+  function showConfirm(msg,cb){ openModal('确认操作',`<p style="margin:16px 0;font-size:15px;">${msg}</p>`,`<button class="btn btn-outline" id="cfCancel">取消</button> <button class="btn btn-primary" id="cfOk">确定</button>`,(ov)=>{ov.querySelector('#cfOk').addEventListener('click',()=>{ov.remove();cb(true);});ov.querySelector('#cfCancel').addEventListener('click',()=>{ov.remove();cb(false);});});}
+  function showPrompt(title,ph,v,cb){ openModal(title,`<input id="pmInput" class="input-control" value="${v||''}" placeholder="${ph||''}">`,`<button class="btn btn-outline" id="pmCancel">取消</button> <button class="btn btn-primary" id="pmOk">确定</button>`,(ov)=>{const inp=ov.querySelector('#pmInput');ov.querySelector('#pmOk').addEventListener('click',()=>{ov.remove();cb(inp.value.trim());});ov.querySelector('#pmCancel').addEventListener('click',()=>{ov.remove();cb(null);});});}
+
+  const menu = [
+    {section:'📊 主菜单'},{id:'dashboard',icon:'📈',label:'仪表盘'},
+    {section:'📋 资料'},{id:'products',icon:'📦',label:'商品管理'},{id:'suppliers',icon:'🏭',label:'供应商'},{id:'customers',icon:'👥',label:'客户'},{id:'staffs',icon:'👤',label:'职员管理'},{id:'warehouses',icon:'🏬',label:'仓库'},{id:'accounts',icon:'💳',label:'账户'},
+    {section:'🛒 采购'},{id:'purchaseOrder',icon:'📝',label:'采购订单'},{id:'purchase',icon:'📥',label:'采购入库'},{id:'purchaseReturn',icon:'↩️',label:'采购退货'},
+    {section:'💰 销售'},{id:'salesOrder',icon:'📝',label:'销售订单'},{id:'sales',icon:'📤',label:'销售出库'},{id:'salesReturn',icon:'↩️',label:'销售退货'},
+    {section:'🧮 库存'},{id:'inventory',icon:'📊',label:'库存报表'},{id:'check',icon:'🔍',label:'盘点单'},
+    {section:'💸 资金'},{id:'receipt',icon:'🧾',label:'收款单'},{id:'payment',icon:'💳',label:'付款单'},{id:'reconciliation',icon:'📑',label:'往来对账'},
+    {section:'⚙️ 系统'},{id:'company',icon:'🏢',label:'账套管理'},{id:'params',icon:'🔧',label:'系统参数'},{id:'users',icon:'👤',label:'用户管理'},{id:'logs',icon:'📜',label:'操作日志'}
+  ];
+
+  function buildSidebar(){
+    let html=''; menu.forEach(m=>{ if(m.section) html+=`<div class="nav-section">${m.section}</div>`; else html+=`<div class="nav-item" data-page="${m.id}"><span>${m.icon}</span> ${m.label}</div>`; });
+    document.getElementById('sideNav').innerHTML=html;
+    document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',function(){ navigate(this.dataset.page); }));
+    document.getElementById('currentUserLabel').innerText=currentUser?currentUser.username:'未登录';
+  }
+
+  let currentPage='dashboard';
+  function navigate(page){ currentPage=page; document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); const ni=document.querySelector(`.nav-item[data-page="${page}"]`); if(ni) ni.classList.add('active'); renderPage(page); if(window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open'); }
+
+  function renderPage(page){
+    let title='', html='';
+    switch(page){
+      case 'dashboard': title='智能仪表盘'; html=renderDashboard(); break;
+      case 'products': title='商品管理'; html=renderProducts(); break;
+      case 'suppliers': title='供应商管理'; html=renderSuppliers(); break;
+      case 'customers': title='客户管理'; html=renderCustomers(); break;
+      case 'staffs': title='职员管理'; html=renderStaffs(); break;
+      case 'warehouses': title='仓库管理'; html=renderWarehouses(); break;
+      case 'accounts': title='账户管理'; html=renderAccounts(); break;
+      case 'purchaseOrder': title='采购订单'; html=renderPurchaseOrders(); break;
+      case 'purchase': title='采购入库'; html=renderPurchaseList(); break;
+      case 'purchaseReturn': title='采购退货'; html=renderPurchaseReturns(); break;
+      case 'salesOrder': title='销售订单'; html=renderSalesOrders(); break;
+      case 'sales': title='销售出库'; html=renderSalesList(); break;
+      case 'salesReturn': title='销售退货'; html=renderSalesReturns(); break;
+      case 'inventory': title='库存报表'; html=renderInventory(); break;
+      case 'check': title='盘点单'; html=renderCheck(); break;
+      case 'receipt': title='收款单'; html=renderReceipts(); break;
+      case 'payment': title='付款单'; html=renderPayments(); break;
+      case 'reconciliation': title='往来对账'; html=renderReconciliation(); break;
+      case 'company': title='账套管理'; html=renderCompany(); break;
+      case 'params': title='系统参数'; html=renderParams(); break;
+      case 'users': title='用户管理'; html=renderUsers(); break;
+      case 'logs': title='操作日志'; html=renderLogs(); break;
+      default: title='仪表盘'; html=renderDashboard();
+    }
+    document.getElementById('pageTitle').innerText=title;
+    document.getElementById('contentArea').innerHTML=html;
+    attachEvents(page);
+  }
+
+  function attachEvents(page){
+    if(page==='dashboard'){ document.getElementById('exportExcelBtn')?.addEventListener('click',exportExcel); document.getElementById('importExcelBtn')?.addEventListener('click',importExcel); document.getElementById('downloadTemplateBtn')?.addEventListener('click',downloadTemplate); }
+    if(page==='params') document.getElementById('saveParamsBtn')?.addEventListener('click',saveParams);
+    if(page==='users') document.getElementById('addUserBtn')?.addEventListener('click',window.addUser);
+    if(page==='company') document.getElementById('saveCompanyBtn')?.addEventListener('click',saveCompanyInfo);
+    if(page==='reconciliation'){ document.getElementById('recQueryBtn')?.addEventListener('click',renderReconciliation); document.getElementById('recPartyType')?.addEventListener('change',function(){ const sel=document.getElementById('recPartyId'); sel.innerHTML=(this.value==='customer'?app.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''):app.suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')); }); }
+  }
+
+  // ==================== 渲染函数 ====================
+  function renderDashboard(){
+    const totalStock=app.products.reduce((s,p)=>s+p.stock,0);
+    const lowStock=app.products.filter(p=>p.stock<p.minStock);
+    const totalSales=app.salesOrders.filter(s=>s.status==='done').reduce((s,o)=>s+o.total,0);
+    const totalPurchase=app.purchaseOrders.filter(p=>p.status==='done').reduce((s,o)=>s+o.total,0);
+    const inputTax=app.purchaseOrders.filter(p=>p.status==='done').reduce((s,o)=>s+(o.taxAmount||0),0);
+    const outputTax=app.salesOrders.filter(s=>s.status==='done').reduce((s,o)=>s+(o.taxAmount||0),0);
+    const catMap={}; app.products.forEach(p=>{ const cat=p.category||'未分类'; catMap[cat]=(catMap[cat]||0)+p.stock; });
+    const catBars=Object.entries(catMap).map(([cat,cnt])=>{ const pct=Math.min(100,(cnt/Math.max(1,totalStock))*100); return `<div style="display:flex;align-items:center;gap:8px;margin:8px 0;"><span style="width:80px;font-size:13px;">${cat}</span><div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${pct}%;"></div></div><span style="font-size:13px;min-width:40px;">${cnt}</span></div>`; }).join('');
+    return `
+    <div class="grid-cols">
+      <div class="stat-card"><div class="icon" style="background:#eff4ff;color:#4f6ef7;">📦</div><div><div class="label">商品总数</div><div class="value">${app.products.length}</div></div></div>
+      <div class="stat-card"><div class="icon" style="background:#ecfdf5;color:#10b981;">📊</div><div><div class="label">总库存</div><div class="value">${totalStock}</div></div></div>
+      <div class="stat-card"><div class="icon" style="background:#fef2f2;color:#ef4444;">⚠️</div><div><div class="label">预警商品</div><div class="value">${lowStock.length}</div></div></div>
+      <div class="stat-card"><div class="icon" style="background:#eef2ff;color:#6366f1;">💰</div><div><div class="label">总销售额</div><div class="value">${fmtMoney(totalSales)}</div></div></div>
+      <div class="stat-card"><div class="icon" style="background:#fffbeb;color:#f59e0b;">🛒</div><div><div class="label">总采购额</div><div class="value">${fmtMoney(totalPurchase)}</div></div></div>
+      <div class="stat-card"><div class="icon" style="background:#fef3c7;color:#d97706;">🧾</div><div><div class="label">进项税额</div><div class="value">${fmtMoney(inputTax)}</div></div></div>
+      <div class="stat-card"><div class="icon" style="background:#ede9fe;color:#7c3aed;">📤</div><div><div class="label">销项税额</div><div class="value">${fmtMoney(outputTax)}</div></div></div>
+    </div>
+    <div class="card"><h3>📂 分类库存</h3>${catBars||'<div class="empty-state">暂无数据</div>'}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-success" id="exportExcelBtn">📤 导出Excel</button>
+      <button class="btn btn-outline" id="importExcelBtn">📥 导入Excel</button>
+      <button class="btn btn-outline" id="downloadTemplateBtn">📋 下载模板</button>
+    </div>`;
+  }
+
+  function renderProducts(){
+    const rows=app.products.map(p=>`<tr>
+      <td>${p.id}</td><td>${p.name}</td><td>${p.category||''}</td>
+      <td class="editable" data-id="${p.id}" data-field="costPrice">${fmtPrice(p.costPrice)}</td>
+      <td class="editable" data-id="${p.id}" data-field="sellPrice">${fmtPrice(p.sellPrice)}</td>
+      <td class="editable" data-id="${p.id}" data-field="stock">${p.stock}</td>
+      <td class="editable" data-id="${p.id}" data-field="minStock">${p.minStock}</td>
+      <td>${p.productionDate||''}</td><td>${p.expiryDays||''}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="window.deleteProduct('${p.id}')">删除</button></td>
+    </tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addProduct()">新增商品</button><small>（双击数值编辑）</small>
+      <table><thead><tr><th>编号</th><th>名称</th><th>分类</th><th>成本价</th><th>售价</th><th>库存</th><th>安全库存</th><th>生产日期</th><th>保质期(天)</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="10"><div class="empty-state">暂无商品</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderSuppliers(){
+    const rows=app.suppliers.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.contact||''}</td><td>${s.phone||''}</td><td>${s.taxId||''}</td><td><button class="btn btn-danger btn-sm" onclick="window.deleteSupplier('${s.id}')">删除</button></td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addSupplier()">新增供应商</button><table><thead><tr><th>编号</th><th>名称</th><th>联系人</th><th>电话</th><th>税号</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="6"><div class="empty-state">暂无供应商</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderCustomers(){
+    const rows=app.customers.map(c=>`<tr><td>${c.id}</td><td>${c.name}</td><td>${c.contact||''}</td><td>${c.phone||''}</td><td><button class="btn btn-danger btn-sm" onclick="window.deleteCustomer('${c.id}')">删除</button></td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addCustomer()">新增客户</button><table><thead><tr><th>编号</th><th>名称</th><th>联系人</th><th>电话</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="5"><div class="empty-state">暂无客户</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderStaffs(){
+    const rows=app.staffs.map(s=>`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.phone||''}</td><td>${s.role||''}</td><td><button class="btn btn-danger btn-sm" onclick="window.deleteStaff('${s.id}')">删除</button></td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addStaff()">新增职员</button><table><thead><tr><th>编号</th><th>姓名</th><th>电话</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="5"><div class="empty-state">暂无职员</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderWarehouses(){
+    const rows=app.warehouses.map(w=>`<tr><td>${w.id}</td><td>${w.name}</td><td>${w.address||''}</td><td>${w.manager||''}</td><td>${w.phone||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addWarehouse()">新增仓库</button><table><thead><tr><th>编号</th><th>名称</th><th>地址</th><th>负责人</th><th>电话</th></tr></thead><tbody>${rows||'<tr><td colspan="5"><div class="empty-state">暂无仓库</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderAccounts(){
+    const rows=app.accounts.map(a=>`<tr><td>${a.id}</td><td>${a.name}</td><td class="editable" data-id="${a.id}" data-type="account" data-field="balance">${a.balance}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addAccount()">新增账户</button><small>（双击修改余额）</small><table><thead><tr><th>编号</th><th>名称</th><th>余额</th></tr></thead><tbody>${rows||'<tr><td colspan="3"><div class="empty-state">暂无账户</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderPurchaseOrders(){
+    const list=app.purchaseOrders.filter(o=>o.status==='order');
+    const rows=list.map(o=>`<tr><td>${o.id}</td><td>${o.productName}</td><td>${fmtQty(o.qty)}</td><td>${fmtMoney(o.price)}</td><td>${o.taxRate||app.sysParams.defaultTaxRate}%</td><td>${fmtMoney(o.taxAmount||0)}</td><td>${fmtMoney(o.total)}</td><td>${o.supplier||''}</td><td>${o.staff||''}</td><td>${o.deliveryDate||''}</td><td><button class="btn btn-outline btn-sm" onclick="window.convertPO('${o.id}')">生成入库</button></td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addPurchaseOrder()">新增采购订单</button>
+      <table><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>单价</th><th>税率</th><th>税额</th><th>价税合计</th><th>供应商</th><th>经手人</th><th>交货日</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="11"><div class="empty-state">暂无订单</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderPurchaseList(){
+    const list=app.purchaseOrders.filter(o=>o.status==='done');
+    const rows=list.map(o=>`<tr><td>${o.id}</td><td>${o.productName}</td><td>${fmtQty(o.qty)}</td><td>${fmtMoney(o.price)}</td><td>${fmtMoney(o.total)}</td><td>${o.warehouse}</td><td>${o.supplier||''}</td><td>${o.staff||''}</td><td>${o.date||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-success" onclick="window.addPurchase()">新增采购入库</button>
+      <table><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>单价</th><th>金额</th><th>仓库</th><th>供应商</th><th>经手人</th><th>日期</th></tr></thead><tbody>${rows||'<tr><td colspan="9"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderPurchaseReturns(){
+    const rows=app.purchaseReturns.map(r=>`<tr><td>${r.id}</td><td>${r.productName}</td><td>${fmtQty(r.qty)}</td><td>${fmtMoney(r.price)}</td><td>${fmtMoney(r.total)}</td><td>${r.staff||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-danger" onclick="window.addPurchaseReturn()">新增采购退货</button><table><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>单价</th><th>金额</th><th>经手人</th></tr></thead><tbody>${rows||'<tr><td colspan="6"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderSalesOrders(){
+    const list=app.salesOrders.filter(o=>o.status==='order');
+    const rows=list.map(o=>`<tr><td>${o.id}</td><td>${o.productName}</td><td>${fmtQty(o.qty)}</td><td>${fmtMoney(o.price)}</td><td>${o.discount||0}%</td><td>${fmtMoney(o.total)}</td><td>${o.customer||''}</td><td>${o.staff||''}</td><td>${o.deliveryDate||''}</td><td><button class="btn btn-outline btn-sm" onclick="window.convertSO('${o.id}')">生成出库</button></td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-primary" onclick="window.addSalesOrder()">新增销售订单</button>
+      <table><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>单价</th><th>折扣</th><th>折后金额</th><th>客户</th><th>经手人</th><th>交货日</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="10"><div class="empty-state">暂无订单</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderSalesList(){
+    const list=app.salesOrders.filter(o=>o.status==='done');
+    const rows=list.map(o=>`<tr><td>${o.id}</td><td>${o.productName}</td><td>${fmtQty(o.qty)}</td><td>${fmtMoney(o.price)}</td><td>${fmtMoney(o.total)}</td><td>${o.warehouse}</td><td>${o.customer||''}</td><td>${o.staff||''}</td><td>${o.date||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-success" onclick="window.addSales()">新增销售出库</button>
+      <table><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>单价</th><th>金额</th><th>仓库</th><th>客户</th><th>经手人</th><th>日期</th></tr></thead><tbody>${rows||'<tr><td colspan="9"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderSalesReturns(){
+    const rows=app.salesReturns.map(r=>`<tr><td>${r.id}</td><td>${r.productName}</td><td>${fmtQty(r.qty)}</td><td>${fmtMoney(r.price)}</td><td>${fmtMoney(r.total)}</td><td>${r.staff||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-danger" onclick="window.addSalesReturn()">新增销售退货</button><table><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>单价</th><th>金额</th><th>经手人</th></tr></thead><tbody>${rows||'<tr><td colspan="6"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderInventory(){
+    const rows=app.products.map(p=>{ const status=p.stock<p.minStock?'<span class="badge badge-danger">不足</span>':p.stock===0?'<span class="badge badge-warning">缺货</span>':'<span class="badge badge-success">正常</span>'; return `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.stock}</td><td>${p.minStock}</td><td>${fmtMoney(p.costPrice)}</td><td>${fmtMoney(p.stock*p.costPrice)}</td><td>${status}</td></tr>`; }).join('');
+    return `<div class="card"><table><thead><tr><th>编号</th><th>名称</th><th>库存</th><th>安全库存</th><th>成本</th><th>库存价值</th><th>状态</th></tr></thead><tbody>${rows||'<tr><td colspan="7"><div class="empty-state">暂无商品</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderCheck(){
+    const rows=app.products.map(p=>`<tr><td>${p.id}</td><td>${p.name}</td><td>${p.stock}</td><td><input type="number" id="cnt_${p.id}" value="${p.stock}" style="width:80px;" class="input-control"></td></tr>`).join('');
+    return `<div class="card"><h3>盘点单</h3><table><thead><tr><th>编号</th><th>名称</th><th>系统库存</th><th>实际库存</th></tr></thead><tbody>${rows}</tbody></table><button class="btn btn-primary mt-2" onclick="window.submitCheck()">保存盘点</button></div>`;
+  }
+
+  function renderReceipts(){
+    const rows=app.receipts.map(r=>`<tr><td>${r.id}</td><td>${r.customer}</td><td>${fmtMoney(r.amount)}</td><td>${r.account}</td><td>${r.date||''}</td><td>${r.remark||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-success" onclick="window.addReceipt()">新增收款</button><table><thead><tr><th>单号</th><th>客户</th><th>金额</th><th>账户</th><th>日期</th><th>备注</th></tr></thead><tbody>${rows||'<tr><td colspan="6"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderPayments(){
+    const rows=app.payments.map(p=>`<tr><td>${p.id}</td><td>${p.supplier}</td><td>${fmtMoney(p.amount)}</td><td>${p.account}</td><td>${p.date||''}</td><td>${p.remark||''}</td></tr>`).join('');
+    return `<div class="card"><button class="btn btn-danger" onclick="window.addPayment()">新增付款</button><table><thead><tr><th>单号</th><th>供应商</th><th>金额</th><th>账户</th><th>日期</th><th>备注</th></tr></thead><tbody>${rows||'<tr><td colspan="6"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderReconciliation(){
+    const partyType=document.getElementById('recPartyType')?.value||'customer';
+    const partyId=document.getElementById('recPartyId')?.value;
+    let records=[];
+    if(partyType==='customer') records=app.salesOrders.filter(so=>so.customer===partyId&&so.status==='done');
+    else records=app.purchaseOrders.filter(po=>po.supplier===partyId&&po.status==='done');
+    const rows=records.map(r=>`<tr><td>${r.id}</td><td>${r.productName}</td><td>${r.qty}</td><td>${fmtMoney(r.total)}</td><td>${r.date}</td></tr>`).join('');
+    const partyOptions=(partyType==='customer'?app.customers.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''):app.suppliers.map(s=>`<option value="${s.id}">${s.name}</option>`).join(''));
+    return `<div class="card"><h3>往来对账单</h3>
+      <div class="input-group"><label>类型</label><select id="recPartyType" class="input-control"><option value="customer" ${partyType==='customer'?'selected':''}>客户</option><option value="supplier" ${partyType==='supplier'?'selected':''}>供应商</option></select></div>
+      <div class="input-group"><label>选择</label><select id="recPartyId" class="input-control">${partyOptions}</select></div>
+      <button class="btn btn-primary" id="recQueryBtn">查询</button>
+      <table style="margin-top:16px;"><thead><tr><th>单号</th><th>商品</th><th>数量</th><th>金额</th><th>日期</th></tr></thead><tbody>${rows||'<tr><td colspan="5"><div class="empty-state">暂无记录</div></td></tr>'}</tbody></table></div>`;
+  }
+
+  function renderCompany(){ const c=getCompany()||{}; return `<div class="card"><h3>公司信息</h3><div class="input-group"><label>公司名称</label><input id="cName" class="input-control" value="${c.name||''}"></div><div class="input-group"><label>启用日期</label><input id="cDate" class="input-control" type="date" value="${c.startDate||''}"></div><button class="btn btn-primary" id="saveCompanyBtn">保存</button></div>`; }
+
+  function renderParams(){ return `<div class="card"><h3>系统参数</h3><div class="input-group"><label>数量小数位</label><input id="qtyDec" class="input-control" type="number" value="${app.sysParams.qtyDec}"></div><div class="input-group"><label>单价小数位</label><input id="priceDec" class="input-control" type="number" value="${app.sysParams.priceDec}"></div><div class="input-group"><label>默认税率(%)</label><input id="taxRate" class="input-control" type="number" value="${app.sysParams.defaultTaxRate}"></div><button class="btn btn-primary" id="saveParamsBtn">保存参数</button></div>`; }
+
+  function renderUsers(){ const rows=auth.users.map(u=>`<tr><td>${u.username}</td><td>${u.role}</td><td>${u.username!==DEFAULT_USER?`<button class="btn btn-danger btn-sm" onclick="window.deleteUser('${u.username}')">删除</button>`:''}</td></tr>`).join(''); return `<div class="card"><h3>用户列表</h3><table><thead><tr><th>用户名</th><th>角色</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table><button class="btn btn-primary mt-2" id="addUserBtn">添加用户</button><div class="card mt-2"><h4>修改密码</h4><input id="newPwd" class="input-control" type="password" placeholder="新密码"><button class="btn btn-primary mt-2" id="changePwdBtn">修改密码</button></div></div>`; }
+
+  function renderLogs(){ const rows=app.logs.slice(-30).reverse().map(l=>`<tr><td>${l.time}</td><td>${l.msg}</td></tr>`).join(''); return `<div class="card"><table><thead><tr><th>时间</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan="2"><div class="empty-state">暂无日志</div></td></tr>'}</tbody></table></div>`; }
+
+  // ==================== 业务函数（全链路联动） ====================
+  window.addProduct=function(){ let html=`<div class="input-group"><label>名称</label><input id="pname" class="input-control"></div><div class="input-group"><label>成本价</label><input id="pcost" class="input-control" type="number" step="0.01"></div><div class="input-group"><label>售价</label><input id="psell" class="input-control" type="number" step="0.01"></div><div class="input-group"><label>初始库存</label><input id="pstock" class="input-control" type="number" value="0"></div><div class="input-group"><label>安全库存</label><input id="pmin" class="input-control" type="number" value="10"></div><div class="input-group"><label>生产日期</label><input id="pdate" class="input-control" type="date"></div><div class="input-group"><label>保质期(天)</label><input id="pexpiry" class="input-control" type="number"></div>`; openModal('新增商品',html,`<button class="btn btn-primary" id="saveProd">保存</button>`,(ov)=>{ov.querySelector('#saveProd').addEventListener('click',()=>{const name=ov.querySelector('#pname').value.trim();if(!name)return toast('名称必填','error');app.products.push({id:genId('P','product'),name,category:'',costPrice:parseFloat(ov.querySelector('#pcost').value)||0,sellPrice:parseFloat(ov.querySelector('#psell').value)||0,stock:parseInt(ov.querySelector('#pstock').value)||0,minStock:parseInt(ov.querySelector('#pmin').value)||10,productionDate:ov.querySelector('#pdate').value,expiryDays:parseInt(ov.querySelector('#pexpiry').value)||0,unit:'个'});persist();toast('已添加');ov.remove();renderPage('products');});});};
+  window.deleteProduct=(id)=>{showConfirm('确定删除该商品吗？',(ok)=>{if(ok){app.products=app.products.filter(p=>p.id!==id);persist();renderPage('products');}});};
+  window.addSupplier=function(){let html=`<div class="input-group"><label>名称</label><input id="sname" class="input-control"></div><div class="input-group"><label>联系人</label><input id="scont" class="input-control"></div><div class="input-group"><label>电话</label><input id="sph" class="input-control"></div><div class="input-group"><label>税号</label><input id="stax" class="input-control"></div>`;openModal('新增供应商',html,`<button class="btn btn-primary" id="saveSup">保存</button>`,(ov)=>{ov.querySelector('#saveSup').addEventListener('click',()=>{const n=ov.querySelector('#sname').value.trim();if(!n)return toast('名称必填','error');app.suppliers.push({id:genId('S','supplier'),name:n,contact:ov.querySelector('#scont').value,phone:ov.querySelector('#sph').value,taxId:ov.querySelector('#stax').value,address:'',bankAccount:'',remark:''});persist();toast('已添加');ov.remove();renderPage('suppliers');});});};
+  window.deleteSupplier=(id)=>{showConfirm('删除该供应商吗？',(ok)=>{if(ok){app.suppliers=app.suppliers.filter(s=>s.id!==id);persist();renderPage('suppliers');}});};
+  window.addCustomer=function(){let html=`<div class="input-group"><label>名称</label><input id="cname" class="input-control"></div><div class="input-group"><label>联系人</label><input id="ccont" class="input-control"></div><div class="input-group"><label>电话</label><input id="cph" class="input-control"></div>`;openModal('新增客户',html,`<button class="btn btn-primary" id="saveCust">保存</button>`,(ov)=>{ov.querySelector('#saveCust').addEventListener('click',()=>{const n=ov.querySelector('#cname').value.trim();if(!n)return toast('名称必填','error');app.customers.push({id:genId('C','customer'),name:n,contact:ov.querySelector('#ccont').value,phone:ov.querySelector('#cph').value,address:'',taxId:'',bankAccount:'',remark:''});persist();ov.remove();renderPage('customers');});});};
+  window.deleteCustomer=(id)=>{showConfirm('删除该客户吗？',(ok)=>{if(ok){app.customers=app.customers.filter(c=>c.id!==id);persist();renderPage('customers');}});};
+  window.addStaff=function(){let html=`<div class="input-group"><label>姓名</label><input id="stname" class="input-control"></div><div class="input-group"><label>电话</label><input id="stphone" class="input-control"></div><div class="input-group"><label>角色</label><input id="strole" class="input-control" placeholder="如：仓管、采购员、销售员"></div>`;openModal('新增职员',html,`<button class="btn btn-primary" id="saveStaff">保存</button>`,(ov)=>{ov.querySelector('#saveStaff').addEventListener('click',()=>{const name=ov.querySelector('#stname').value.trim();if(!name)return toast('名称必填','error');app.staffs.push({id:genId('ST','staff'),name,phone:ov.querySelector('#stphone').value,role:ov.querySelector('#strole').value});persist();toast('已添加');ov.remove();renderPage('staffs');});});};
+  window.deleteStaff=(id)=>{showConfirm('删除该职员吗？',(ok)=>{if(ok){app.staffs=app.staffs.filter(s=>s.id!==id);persist();renderPage('staffs');}});};
+  window.addWarehouse=function(){showPrompt('新增仓库','名称','',(name)=>{if(name){app.warehouses.push({id:genId('W','warehouse'),name,address:'',manager:'',phone:''});persist();renderPage('warehouses');}});};
+  window.addAccount=function(){showPrompt('新增账户','名称','',(name)=>{if(name){app.accounts.push({id:genId('A','account'),name,balance:0});persist();renderPage('accounts');}});};
+
+  // 采购订单（职员联动）
+  window.addPurchaseOrder=()=>{
+    const prodOpt=app.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    const supOpt=app.suppliers.map(s=>`<option>${s.name}</option>`).join('');
+    const staffOpt=app.staffs.map(s=>`<option>${s.name}</option>`).join('');
+    const whOpt=app.warehouses.map(w=>`<option>${w.name}</option>`).join('');
+    let html=`<div class="input-group"><label>商品</label><select id="prodId" class="input-control">${prodOpt}</select></div><div class="input-group"><label>数量</label><input id="qty" class="input-control" type="number" value="1"></div><div class="input-group"><label>单价</label><input id="price" class="input-control" type="number" step="0.01"></div><div class="input-group"><label>税率(%)</label><input id="taxRate" class="input-control" type="number" value="${app.sysParams.defaultTaxRate}"></div><div class="input-group"><label>仓库</label><select id="wh" class="input-control">${whOpt}</select></div><div class="input-group"><label>供应商</label><select id="party" class="input-control">${supOpt}</select></div><div class="input-group"><label>经手人</label><select id="staff" class="input-control">${staffOpt}</select></div><div class="input-group"><label>交货日期</label><input id="delDate" class="input-control" type="date"></div>`;
+    openModal('采购订单',html,`<button class="btn btn-primary" id="saveOrder">保存</button>`,(ov)=>{ov.querySelector('#saveOrder').addEventListener('click',()=>{const prodId=ov.querySelector('#prodId').value,qty=parseFloat(ov.querySelector('#qty').value)||0,price=parseFloat(ov.querySelector('#price').value)||0,taxRate=parseFloat(ov.querySelector('#taxRate').value)||0;const taxAmount=qty*price*taxRate/100,total=qty*price+taxAmount;const order={id:genId('PO','po'),productId:prodId,productName:getById(app.products,prodId)?.name,qty,price,taxRate,taxAmount,total,warehouse:ov.querySelector('#wh').value,supplier:ov.querySelector('#party').value,staff:ov.querySelector('#staff').value,deliveryDate:ov.querySelector('#delDate').value,status:'order',date:new Date().toISOString().slice(0,10)};app.purchaseOrders.push(order);persist();toast('订单已保存');ov.remove();renderPage('purchaseOrder');});});
+  };
+  window.convertPO=(id)=>{const po=getById(app.purchaseOrders,id);if(!po||po.status!=='order')return;const p=getById(app.products,po.productId);if(p)p.stock+=po.qty;po.status='done';persist();toast('已生成入库单');setTimeout(()=>navigate('purchase'),300);};
+
+  // 销售订单（职员联动）
+  window.addSalesOrder=()=>{
+    const prodOpt=app.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    const custOpt=app.customers.map(c=>`<option>${c.name}</option>`).join('');
+    const staffOpt=app.staffs.map(s=>`<option>${s.name}</option>`).join('');
+    const whOpt=app.warehouses.map(w=>`<option>${w.name}</option>`).join('');
+    let html=`<div class="input-group"><label>商品</label><select id="prodId" class="input-control">${prodOpt}</select></div><div class="input-group"><label>数量</label><input id="qty" class="input-control" type="number" value="1"></div><div class="input-group"><label>单价</label><input id="price" class="input-control" type="number" step="0.01"></div><div class="input-group"><label>折扣(%)</label><input id="discount" class="input-control" type="number" value="0"></div><div class="input-group"><label>仓库</label><select id="wh" class="input-control">${whOpt}</select></div><div class="input-group"><label>客户</label><select id="party" class="input-control">${custOpt}</select></div><div class="input-group"><label>经手人</label><select id="staff" class="input-control">${staffOpt}</select></div><div class="input-group"><label>交货日期</label><input id="delDate" class="input-control" type="date"></div>`;
+    openModal('销售订单',html,`<button class="btn btn-primary" id="saveOrder">保存</button>`,(ov)=>{ov.querySelector('#saveOrder').addEventListener('click',()=>{const prodId=ov.querySelector('#prodId').value,qty=parseFloat(ov.querySelector('#qty').value)||0,price=parseFloat(ov.querySelector('#price').value)||0,discount=parseFloat(ov.querySelector('#discount').value)||0;const taxAmount=qty*price*app.sysParams.defaultTaxRate/100,total=qty*price*(1-discount/100)+taxAmount;const order={id:genId('SO','so'),productId:prodId,productName:getById(app.products,prodId)?.name,qty,price,taxRate:app.sysParams.defaultTaxRate,taxAmount,total,discount,warehouse:ov.querySelector('#wh').value,customer:ov.querySelector('#party').value,staff:ov.querySelector('#staff').value,deliveryDate:ov.querySelector('#delDate').value,status:'order',date:new Date().toISOString().slice(0,10)};app.salesOrders.push(order);persist();toast('订单已保存');ov.remove();renderPage('salesOrder');});});
+  };
+  window.convertSO=(id)=>{const so=getById(app.salesOrders,id);if(!so||so.status!=='order')return;const p=getById(app.products,so.productId);if(!p)return;if(p.stock<so.qty)return toast('库存不足','error');p.stock-=so.qty;so.status='done';persist();toast('已生成出库单');setTimeout(()=>navigate('sales'),300);};
+
+  // 直接入库/出库（也包含经手人）
+  window.addPurchase=()=>directDoc('采购入库',false,false);
+  window.addSales=()=>directDoc('销售出库',false,true);
+  window.addPurchaseReturn=()=>directDoc('采购退货',true,false);
+  window.addSalesReturn=()=>directDoc('销售退货',true,true);
+  function directDoc(title,isReturn,isSale){
+    const prodOpt=app.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    const whOpt=app.warehouses.map(w=>`<option>${w.name}</option>`).join('');
+    const staffOpt=app.staffs.map(s=>`<option>${s.name}</option>`).join('');
+    let html=`<div class="input-group"><label>商品</label><select id="prodId" class="input-control">${prodOpt}</select></div><div class="input-group"><label>数量</label><input id="qty" class="input-control" type="number" value="1"></div><div class="input-group"><label>单价</label><input id="price" class="input-control" type="number" step="0.01"></div><div class="input-group"><label>仓库</label><select id="wh" class="input-control">${whOpt}</select></div><div class="input-group"><label>经手人</label><select id="staff" class="input-control">${staffOpt}</select></div>`;
+    openModal(title,html,`<button class="btn btn-primary" id="saveDirect">保存</button>`,(ov)=>{ov.querySelector('#saveDirect').addEventListener('click',()=>{const prodId=ov.querySelector('#prodId').value,qty=parseFloat(ov.querySelector('#qty').value)||0,price=parseFloat(ov.querySelector('#price').value)||0,wh=ov.querySelector('#wh').value,staff=ov.querySelector('#staff').value,product=getById(app.products,prodId);if(!product||qty<=0)return toast('信息不全','error');const total=qty*price;if(!isReturn&&!isSale){product.stock+=qty;app.purchaseOrders.push({id:genId('PO','po'),productId:prodId,productName:product.name,qty,price,taxRate:0,taxAmount:0,total,warehouse:wh,staff,status:'done',date:new Date().toISOString().slice(0,10)});}else if(isReturn&&!isSale){if(product.stock<qty)return toast('库存不足','error');product.stock-=qty;app.purchaseReturns.push({id:genId('PR','pr'),productId:prodId,productName:product.name,qty,price,total,warehouse:wh,staff,date:new Date().toISOString().slice(0,10)});}else if(!isReturn&&isSale){if(product.stock<qty)return toast('库存不足','error');product.stock-=qty;app.salesOrders.push({id:genId('SO','so'),productId:prodId,productName:product.name,qty,price,taxRate:0,taxAmount:0,total,warehouse:wh,staff,status:'done',date:new Date().toISOString().slice(0,10)});}else{product.stock+=qty;app.salesReturns.push({id:genId('SR','sr'),productId:prodId,productName:product.name,qty,price,total,warehouse:wh,staff,date:new Date().toISOString().slice(0,10)});}persist();toast('保存成功');ov.remove();renderPage(currentPage);});});
+  }
+
+  window.addReceipt=function(){const custOpt=app.customers.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');const accOpt=app.accounts.map(a=>`<option value="${a.name}">${a.name}</option>`).join('');const today=new Date().toISOString().slice(0,10);let html=`<div class="input-group"><label>客户</label><select id="rcust" class="input-control">${custOpt}</select></div><div class="input-group"><label>金额</label><input id="ramount" class="input-control" type="number"></div><div class="input-group"><label>账户</label><select id="racc" class="input-control">${accOpt}</select></div><div class="input-group"><label>日期</label><input id="rdate" class="input-control" type="date" value="${today}"></div><div class="input-group"><label>备注</label><input id="rremark" class="input-control"></div>`;openModal('收款单',html,`<button class="btn btn-primary" id="saveR">保存</button>`,(ov)=>{ov.querySelector('#saveR').addEventListener('click',()=>{const cust=ov.querySelector('#rcust').value,amount=parseFloat(ov.querySelector('#ramount').value)||0,accName=ov.querySelector('#racc').value,acc=app.accounts.find(a=>a.name===accName);if(!cust||amount<=0||!acc)return toast('信息不全','error');acc.balance+=amount;app.receipts.push({id:genId('R','receipt'),customer:cust,amount,account:accName,date:ov.querySelector('#rdate').value,remark:ov.querySelector('#rremark').value});persist();toast('收款成功');ov.remove();renderPage('receipt');});});};
+  window.addPayment=function(){const supOpt=app.suppliers.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');const accOpt=app.accounts.map(a=>`<option value="${a.name}">${a.name}</option>`).join('');const today=new Date().toISOString().slice(0,10);let html=`<div class="input-group"><label>供应商</label><select id="psup" class="input-control">${supOpt}</select></div><div class="input-group"><label>金额</label><input id="pamount" class="input-control" type="number"></div><div class="input-group"><label>账户</label><select id="pacc" class="input-control">${accOpt}</select></div><div class="input-group"><label>日期</label><input id="pdate" class="input-control" type="date" value="${today}"></div><div class="input-group"><label>备注</label><input id="premark" class="input-control"></div>`;openModal('付款单',html,`<button class="btn btn-primary" id="saveP">保存</button>`,(ov)=>{ov.querySelector('#saveP').addEventListener('click',()=>{const sup=ov.querySelector('#psup').value,amount=parseFloat(ov.querySelector('#pamount').value)||0,accName=ov.querySelector('#pacc').value,acc=app.accounts.find(a=>a.name===accName);if(!sup||amount<=0||!acc)return toast('信息不全','error');if(acc.balance<amount)return toast('余额不足','error');acc.balance-=amount;app.payments.push({id:genId('P','payment'),supplier:sup,amount,account:accName,date:ov.querySelector('#pdate').value,remark:ov.querySelector('#premark').value});persist();toast('付款成功');ov.remove();renderPage('payment');});});};
+
+  window.submitCheck=function(){app.products.forEach(p=>{const el=document.getElementById('cnt_'+p.id);if(el)p.stock=parseInt(el.value)||0;});persist();toast('盘点已保存');renderPage('check');};
+  window.addUser=function(){openModal('添加用户',`<div class="input-group"><label>用户名</label><input id="newUsername" class="input-control"></div><div class="input-group"><label>密码</label><input id="newPassword" class="input-control" type="password"></div>`,`<button class="btn btn-primary" id="saveUser">保存</button>`,(ov)=>{ov.querySelector('#saveUser').addEventListener('click',()=>{const uname=ov.querySelector('#newUsername').value.trim(),pwd=ov.querySelector('#newPassword').value;if(!uname||!pwd)return toast('信息不全','error');if(auth.users.find(u=>u.username===uname))return toast('用户名已存在','error');auth.users.push({username:uname,password:pwd,role:'user'});saveAuth(auth);toast('用户已添加');ov.remove();renderPage('users');});});};
+  window.deleteUser=function(username){if(username===DEFAULT_USER)return toast('不能删除初始管理员','error');showConfirm(`确定删除用户"${username}"吗？`,(ok)=>{if(ok){auth.users=auth.users.filter(u=>u.username!==username);saveAuth(auth);toast('已删除');renderPage('users');}});};
+
+  document.addEventListener('click',(e)=>{if(e.target.id==='changePwdBtn'){const pwd=document.getElementById('newPwd').value;if(!pwd)return toast('请输入新密码','error');const user=auth.users.find(u=>u.username===currentUser.username);if(user){user.password=pwd;saveAuth(auth);toast('密码已修改');}}});
+
+  document.addEventListener('dblclick',function(e){const target=e.target.closest('.editable');if(!target)return;const{id,field,type}=target.dataset;if(target.querySelector('input'))return;const current=target.innerText;const input=document.createElement('input');input.type='text';input.value=current;input.style.width='100%';input.style.padding='4px';target.innerHTML='';target.appendChild(input);input.focus();const save=()=>{let v=input.value.trim();target.innerHTML=v;if(type==='account'){const a=getById(app.accounts,id);if(a){a.balance=parseFloat(v)||0;persist();}}else{const p=getById(app.products,id);if(p){p[field]=parseFloat(v)||0;persist();}}toast('已更新');};input.addEventListener('blur',save);input.addEventListener('keypress',(e)=>{if(e.key==='Enter')input.blur();});});
+
+  function saveParams(){app.sysParams.qtyDec=parseInt(document.getElementById('qtyDec').value)||2;app.sysParams.priceDec=parseInt(document.getElementById('priceDec').value)||2;app.sysParams.defaultTaxRate=parseFloat(document.getElementById('taxRate').value)||0;persist();toast('参数已保存');}
+  function saveCompanyInfo(){const name=document.getElementById('cName').value.trim(),startDate=document.getElementById('cDate').value;saveCompany({name,startDate});toast('公司信息已保存');}
+
+  function downloadAsFile(base64,filename){const a=document.createElement('a');a.href='data:application/octet-stream;base64,'+base64;a.download=filename;a.click();}
+  function exportExcel(){if(!hasXLSX())return toast('Excel库未加载','error');const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(app.products.map(p=>({编号:p.id,名称:p.name,分类:p.category,成本价:p.costPrice,售价:p.sellPrice,库存:p.stock,安全库存:p.minStock,生产日期:p.productionDate,保质期天:p.expiryDays}))),'商品');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(app.warehouses),'仓库');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(app.accounts),'账户');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(app.suppliers),'供应商');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(app.customers),'客户');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(app.staffs),'职员');const wbout=XLSX.write(wb,{bookType:'xlsx',type:'base64'});const fn=`供销存数据_${new Date().toISOString().slice(0,10)}.xlsx`;if(window.plus){plus.io.requestFileSystem(plus.io.PUBLIC_DOCUMENTS,fs=>{fs.root.getFile(fn,{create:true},fe=>{fe.createWriter(w=>{w.write(wbout);toast('已保存到文档');});});});}else{downloadAsFile(wbout,fn);toast('导出成功');}}
+  function importExcel(){if(!hasXLSX())return toast('Excel库未加载','error');function process(data){const wb=XLSX.read(data,{type:'array'});if(wb.Sheets['商品'])app.products=XLSX.utils.sheet_to_json(wb.Sheets['商品']).map((r,i)=>({id:r['编号']||genId('P','product'),name:r['名称']||`商品${i+1}`,category:r['分类']||'',costPrice:parseFloat(r['成本价'])||0,sellPrice:parseFloat(r['售价'])||0,stock:parseInt(r['库存'])||0,minStock:parseInt(r['安全库存'])||10,productionDate:r['生产日期']||'',expiryDays:parseInt(r['保质期天'])||0,unit:'个'}));if(wb.Sheets['仓库'])app.warehouses=XLSX.utils.sheet_to_json(wb.Sheets['仓库']);if(wb.Sheets['账户'])app.accounts=XLSX.utils.sheet_to_json(wb.Sheets['账户']);if(wb.Sheets['供应商'])app.suppliers=XLSX.utils.sheet_to_json(wb.Sheets['供应商']);if(wb.Sheets['客户'])app.customers=XLSX.utils.sheet_to_json(wb.Sheets['客户']);if(wb.Sheets['职员'])app.staffs=XLSX.utils.sheet_to_json(wb.Sheets['职员']);persist();toast('导入成功');renderPage('dashboard');}if(window.plus){plus.io.chooseFile({title:'选择Excel',extensions:['.xlsx','.xls']},fp=>{plus.io.resolveLocalFileSystemURL(fp,en=>{en.file(f=>{const r=new plus.io.FileReader();r.onloadend=e=>{if(e.target.result)process(e.target.result);};r.readAsArrayBuffer(f);});});});}else{const inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls';inp.onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=ev=>process(new Uint8Array(ev.target.result));r.readAsArrayBuffer(f);}};inp.click();}}
+  function downloadTemplate(){if(!hasXLSX())return toast('Excel库未加载');const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{编号:'P001',名称:'示例',成本价:85,售价:199,库存:100,安全库存:20,生产日期:'',保质期天:0}]),'商品');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{id:'W01',name:'总仓库'}]),'仓库');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{id:'S01',名称:'供应商A',联系人:'',电话:'',税号:''}]),'供应商');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{id:'C01',名称:'客户A',联系人:'',电话:''}]),'客户');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([{id:'ST01',姓名:'张三',电话:'',角色:'仓管'}]),'职员');const wbout=XLSX.write(wb,{bookType:'xlsx',type:'base64'});downloadAsFile(wbout,'供销存导入模板.xlsx');toast('模板已下载');}
+
+  function doLogin(){const uname=document.getElementById('loginUsername').value.trim(),pwd=document.getElementById('loginPassword').value;const user=auth.users.find(u=>u.username===uname&&u.password===pwd);if(user){auth.currentUser=user;currentUser=user;saveAuth(auth);document.getElementById('loginOverlay').style.display='none';document.getElementById('appContainer').style.display='flex';initApp();}else{document.getElementById('loginError').innerText='用户名或密码错误';}}
+  function logout(){auth.currentUser=null;currentUser=null;saveAuth(auth);location.reload();}
+
+  function initApp(){
+    buildSidebar();navigate('dashboard');
+    document.getElementById('menuBtn').addEventListener('click',()=>{document.getElementById('sidebar').classList.toggle('open');});
+    document.getElementById('contentArea').addEventListener('click',()=>{if(window.innerWidth<=768)document.getElementById('sidebar').classList.remove('open');});
+    setInterval(()=>{document.getElementById('timeDisplay').innerText=new Date().toLocaleString();},1000);
+    document.getElementById('logoutBtn').addEventListener('click',logout);
+    if(!getCompany()){openModal('创建账套','<div class="input-group"><label>公司名称</label><input id="cName" class="input-control"></div><div class="input-group"><label>启用日期</label><input id="cDate" class="input-control" type="date"></div>','<button class="btn btn-primary" id="createCompany">开始使用</button>',(ov)=>{ov.querySelector('#createCompany').addEventListener('click',()=>{saveCompany({name:document.getElementById('cName').value,startDate:document.getElementById('cDate').value});ov.remove();});});}
+  }
+
+  window.onload=function(){
+    if(auth.currentUser){currentUser=auth.currentUser;document.getElementById('loginOverlay').style.display='none';document.getElementById('appContainer').style.display='flex';initApp();}
+    else{document.getElementById('loginOverlay').style.display='flex';document.getElementById('loginBtn').addEventListener('click',doLogin);document.getElementById('loginPassword').addEventListener('keypress',(e)=>{if(e.key==='Enter')doLogin();});}
+  };
+})();
+</script>
+</body>
+</html>
